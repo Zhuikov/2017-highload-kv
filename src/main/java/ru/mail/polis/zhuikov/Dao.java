@@ -16,6 +16,5 @@ public interface Dao {
     @NotNull
     void upsertData(@NotNull String key, @NotNull byte[] data) throws IllegalArgumentException, IOException;
 
-    @NotNull
     void deleteData(@NotNull String key) throws IOException, IllegalArgumentException;
 }

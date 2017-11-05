@@ -6,7 +6,10 @@ import com.sun.net.httpserver.HttpServer;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.KVService;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
 
@@ -21,6 +24,7 @@ public class Service implements KVService {
     private final Dao serverDao;
 
     private static final String queryPrefix = "id=";
+    private static final int bufferSize = 1024;
 
     private static String getRequestId(@NotNull final String query) {
         if (!query.startsWith(queryPrefix)) {
@@ -76,13 +80,14 @@ public class Service implements KVService {
                     httpExchange.sendResponseHeaders(202, 0);
                     break;
                 case "PUT":
-                    final int size = Integer.valueOf(httpExchange.getRequestHeaders().getFirst("Content-Length"));
-                    final byte[] putData = new byte[size];
-                    int read = httpExchange.getRequestBody().read(putData); // returns -1 if there is no more data
-                    if (read != putData.length && read != -1) {
-                        throw new IOException("Can't read file");
+                    InputStream requestStream = httpExchange.getRequestBody();
+                    byte[] putData = new byte[bufferSize];
+                    try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
+                        while (requestStream.read(putData) != -1) {
+                            stream.write(putData);
+                        }
+                        serverDao.upsertData(id, stream.toByteArray());
                     }
-                    serverDao.upsertData(id, putData);
                     httpExchange.sendResponseHeaders(201, 0);
                     break;
                 default:

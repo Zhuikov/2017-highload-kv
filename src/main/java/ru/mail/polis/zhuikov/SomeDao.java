@@ -32,11 +32,15 @@ public class SomeDao implements Dao {
             throw new NoSuchElementException();
         }
         final File file = getFile(key);
-        final byte[] data = new byte[(int) file.length()];
-        try (InputStream is = new FileInputStream(file)) {
-            if (is.read(data) != file.length()) {
-                throw new IOException("Can't read the file");
-            }
+        final int fileLength = (int) file.length();
+        final byte[] data = new byte[fileLength];
+        if (fileLength == 0) {
+            return data;
+        }
+
+        try (BufferedInputStream stream =
+                     new BufferedInputStream(new FileInputStream(file))) {
+            while (stream.read(data) != -1);
         }
         return data;
     }
