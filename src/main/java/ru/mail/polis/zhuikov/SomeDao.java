@@ -13,9 +13,6 @@ public class SomeDao implements Dao {
     @NotNull
     private final File dir;
 
-    @NotNull
-    private Set<String> keys = new LinkedHashSet<>();
-
     public SomeDao(@NotNull final File dir) {
         this.dir = dir;
     }
@@ -28,10 +25,10 @@ public class SomeDao implements Dao {
     @NotNull
     @Override
     public byte[] getData(@NotNull String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        if (!keys.contains(key)) {
-            throw new NoSuchElementException();
-        }
         final File file = getFile(key);
+        if (!file.exists()) {
+            throw new NoSuchElementException("unknown ID " + key);
+        }
         final int fileLength = (int) file.length();
         final byte[] data = new byte[fileLength];
         if (fileLength == 0) {
@@ -51,13 +48,11 @@ public class SomeDao implements Dao {
         try (OutputStream os = new FileOutputStream(getFile(key))) {
             os.write(data);
         }
-        keys.add(key);
     }
 
     @NotNull
     @Override
     public void deleteData(@NotNull String key) throws IOException, IllegalArgumentException {
         getFile(key).delete();
-        keys.remove(key);
     }
 }

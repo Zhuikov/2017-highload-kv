@@ -34,10 +34,6 @@ public class Service implements KVService {
         return query.substring(queryPrefix.length());
     }
 
-    private static boolean checkRequestId(@NotNull final String query) {
-        return !query.startsWith("/");
-    }
-
     public Service(int port, @NotNull Dao dao) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         serverDao = dao;
@@ -55,12 +51,6 @@ public class Service implements KVService {
 
             if (id.isEmpty()) {
                 httpExchange.sendResponseHeaders(400, 0);
-                httpExchange.close();
-                return;
-            }
-
-            if (!checkRequestId(id)) {
-                httpExchange.sendResponseHeaders(404, 0);
                 httpExchange.close();
                 return;
             }
