@@ -37,9 +37,8 @@ public class SomeDao implements Dao {
 
         try (BufferedInputStream stream =
                      new BufferedInputStream(new FileInputStream(file))) {
-            while (stream.read(data) != -1);
+            return Service.readData(stream);
         }
-        return data;
     }
 
     @NotNull
