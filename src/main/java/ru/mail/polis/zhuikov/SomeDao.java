@@ -29,11 +29,6 @@ public class SomeDao implements Dao {
         if (!file.exists()) {
             throw new NoSuchElementException("unknown ID " + key);
         }
-        final int fileLength = (int) file.length();
-        final byte[] data = new byte[fileLength];
-        if (fileLength == 0) {
-            return data;
-        }
 
         try (BufferedInputStream stream =
                      new BufferedInputStream(new FileInputStream(file))) {

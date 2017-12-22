@@ -93,33 +93,21 @@ public class Service implements KVService {
             return;
         }
 
-        switch (httpExchange.getRequestMethod()) {
-            case GET_METHOD:
-                try {
-                    final byte[] getData = serverDao.getData(params.getId());
-                    sendResponse(httpExchange, new Response(Response.OK, getData));
-                } catch (NoSuchElementException e) {
-                    sendResponse(httpExchange, new Response(Response.NOT_FOUND));
-                }
-                break;
-            case DELETE_METHOD:
-                serverDao.deleteData(params.getId());
-                sendResponse(httpExchange, new Response(Response.ACCEPTED));
-                break;
-            case PUT_METHOD:
-                try {
-                    InputStream requestStream = httpExchange.getRequestBody();
-                    byte[] putData = readData(requestStream);
-                    serverDao.upsertData(params.getId(), putData);
-                    sendResponse(httpExchange, new Response(Response.CREATED, putData));
-                } catch (IOException e) {
-                    sendResponse(httpExchange, new Response(Response.BAD_REQUEST));
-                }
-                break;
-            default:
-                sendResponse(httpExchange, new Response(Response.NOT_ALLOWED));
+
+        byte[] putData = null;
+        if (httpExchange.getRequestMethod().equals(PUT_METHOD)) {
+            InputStream stream = httpExchange.getRequestBody();
+            putData = readData(stream);
         }
 
+        try {
+            Response response = makeRequest(httpExchange.getRequestMethod(), params.getId(), putData);
+            sendResponse(httpExchange, response);
+        } catch (NoSuchElementException e) {
+            sendResponse(httpExchange, new Response(Response.NOT_FOUND));
+        } catch (IOException e) {
+            sendResponse(httpExchange, new Response(Response.BAD_REQUEST));
+        }
     }
 
     private void entityContext(@NotNull HttpExchange httpExchange) throws IOException {
@@ -163,23 +151,23 @@ public class Service implements KVService {
         for (String nodeURL : getNodes(params)) {
             Response response;
             if (nodeURL.equals(URL_SERVER + ":" + PORT)) {
-                response = makeYourselfRequest(GET_METHOD, params.getId(), null);
+                response = makeRequest(GET_METHOD, params.getId(), null);
             } else {
                 response = makeNodeRequest(nodeURL, GET_METHOD, params.getId(), null);
             }
             if (response.getCode() == Response.OK) {
-                ack ++;
+                ack++;
                 if (data == null) {
                     data = response.getData();
                 }
             } else if (response.getCode() == Response.NOT_FOUND) {
-                noData ++;
+                noData++;
             }
         }
 
-        boolean localData = makeYourselfRequest(GET_METHOD, params.getId(), null).getCode() == Response.OK;
+        boolean localData = makeRequest(GET_METHOD, params.getId(), null).getCode() == Response.OK;
         if (ack > 0 && noData == 1 && !localData) {
-            makeYourselfRequest(PUT_METHOD, params.getId(), data);
+            makeRequest(PUT_METHOD, params.getId(), data);
             noData--;
             ack++;
         }
@@ -199,12 +187,12 @@ public class Service implements KVService {
         for (String nodeURL : getNodes(params)) {
             Response response;
             if (nodeURL.equals(URL_SERVER + ":" + PORT)) {
-                response = makeYourselfRequest(DELETE_METHOD, params.getId(), null);
+                response = makeRequest(DELETE_METHOD, params.getId(), null);
             } else {
                 response = makeNodeRequest(nodeURL, DELETE_METHOD, params.getId(), null);
             }
             if (response.getCode() == Response.ACCEPTED) {
-                ack ++;
+                ack++;
             }
         }
 
@@ -220,12 +208,12 @@ public class Service implements KVService {
         for (String nodeURL : getNodes(params)) {
             Response response;
             if (nodeURL.equals(URL_SERVER + ":" + PORT)) {
-                response = makeYourselfRequest(PUT_METHOD, params.getId(), data);
+                response = makeRequest(PUT_METHOD, params.getId(), data);
             } else {
                 response = makeNodeRequest(nodeURL, PUT_METHOD, params.getId(), data);
             }
             if (response.getCode() == Response.CREATED) {
-                ack ++;
+                ack++;
             }
         }
 
@@ -268,7 +256,7 @@ public class Service implements KVService {
         }
     }
 
-    private Response makeYourselfRequest(String method, String id, byte[] data) {
+    private Response makeRequest(String method, String id, byte[] data) {
 
         switch (method) {
             case DELETE_METHOD :
